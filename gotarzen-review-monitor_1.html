@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鍋泰暖 — 評論監控系統</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+:root {
+  --bg:#0d0f14;--surface:#141720;--surface2:#1c2030;--border:#252c3d;
+  --accent:#f59e0b;--accent2:#fcd34d;--blue:#3b82f6;--blue2:#60a5fa;
+  --danger:#ef4444;--success:#22c55e;--warn:#f59e0b;
+  --text:#e8eaf0;--text2:#94a3b8;--text3:#4a5568;--star:#fbbf24;
+  --r:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-serif;font-size:14px;min-height:100vh;}
+/* LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:230px;min-width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
+.logo h1{font-size:15px;font-weight:700;color:var(--accent2);letter-spacing:.05em;}
+.logo span{font-size:11px;color:var(--text3);display:block;margin-top:2px;font-family:'Space Mono',monospace;}
+.sidebar-nav{flex:1;overflow-y:auto;padding:10px 8px;}
+.nav-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--text3);padding:8px 10px 4px;text-transform:uppercase;}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;background:none;border:none;border-radius:7px;color:var(--text2);font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;text-align:left;transition:all .15s;}
+.nav-btn:hover{background:var(--surface2);color:var(--text);}
+.nav-btn.active{background:rgba(245,158,11,.15);color:var(--accent2);}
+.nav-btn .ic{font-size:15px;width:18px;text-align:center;}
+.badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;font-family:'Space Mono',monospace;}
+.badge.warn{background:var(--warn);color:#000;}
+.sidebar-foot{padding:12px 8px;border-top:1px solid var(--border);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{padding:13px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);}
+.topbar h2{font-size:15px;font-weight:600;flex:1;}
+.topbar-clock{font-family:'Space Mono',monospace;font-size:12px;color:var(--text3);}
+.content{flex:1;overflow-y:auto;padding:20px 22px;}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.stat-card .lbl{font-size:11px;color:var(--text3);margin-bottom:5px;}
+.stat-card .val{font-size:26px;font-weight:700;font-family:'Space Mono',monospace;}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:3px;}
+.stat-card.acc .val{color:var(--accent2);}
+.stat-card.dan .val{color:var(--danger);}
+.stat-card.wrn .val{color:var(--warn);}
+.stat-card.suc .val{color:var(--success);}
+/* SECTION */
+.sec{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+/* TABLE */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;}
+thead tr{border-bottom:1px solid var(--border);}
+th{padding:9px 13px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);text-align:left;text-transform:uppercase;}
+td{padding:9px 13px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--surface2);}
+.store-nm{color:var(--text);font-weight:500;}
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.pill.unr{background:rgba(239,68,68,.13);color:var(--danger);border:1px solid rgba(239,68,68,.28);}
+.pill.rep{background:rgba(34,197,94,.1);color:var(--success);border:1px solid rgba(34,197,94,.22);}
+.pill.wrn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.28);}
+/* LINK BTN */
+.lbtn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;background:rgba(59,130,246,.12);color:var(--blue2);border:1px solid rgba(59,130,246,.28);font-size:11px;cursor:pointer;text-decoration:none;transition:all .15s;}
+.lbtn:hover{background:rgba(59,130,246,.22);}
+/* STARS */
+.stars{display:flex;align-items:center;gap:2px;}
+.si{font-size:13px;}
+/* REVIEW CARDS */
+.rev-grid{display:grid;gap:10px;}
+.rev-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;gap:14px;transition:border-color .15s;}
+.rev-card.low{border-left:3px solid var(--danger);}
+.rev-card.mid{border-left:3px solid var(--warn);}
+.rev-meta{min-width:155px;}
+.rev-store{font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:3px;}
+.rev-author{font-size:12px;color:var(--text2);}
+.rev-date{font-size:11px;color:var(--text3);margin-top:2px;font-family:'Space Mono',monospace;}
+.rev-body{flex:1;}
+.rev-txt{font-size:13px;color:var(--text);line-height:1.65;}
+.rev-reply{margin-top:9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--text2);line-height:1.5;font-style:italic;}
+.rev-reply .rl{font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em;font-style:normal;}
+/* ALARM */
+.alarm-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.alarm-bar .ai{font-size:22px;}
+.alarm-bar .info{flex:1;}
+.alarm-bar .info h3{font-size:13px;font-weight:600;}
+.alarm-bar .info p{font-size:12px;color:var(--text3);margin-top:2px;}
+.time-chip{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--warn);padding:5px 13px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);border-radius:8px;}
+.toggle{display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:7px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.28);color:var(--success);font-size:12px;font-weight:600;cursor:pointer;}
+.toggle.off{background:var(--surface2);border-color:var(--border);color:var(--text3);}
+/* ALERT PANEL */
+.alert-pnl{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.alert-hdr{padding:11px 15px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.18);display:flex;align-items:center;gap:8px;}
+.alert-hdr h3{font-size:13px;font-weight:600;color:var(--danger);flex:1;}
+.alert-item{padding:10px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;}
+.alert-item:last-child{border-bottom:none;}
+.adot{width:6px;height:6px;border-radius:50%;background:var(--danger);flex-shrink:0;}
+.atxt{flex:1;font-size:13px;}
+.atxt strong{color:var(--text);}
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:460px;max-width:90vw;}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+.modal p{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.fg{margin-bottom:13px;}
+.fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500;}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Noto Sans TC',sans-serif;font-size:13px;outline:none;transition:border-color .15s;resize:vertical;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);}
+.btn{padding:8px 17px;border-radius:7px;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:600;transition:all .15s;}
+.btn-p{background:var(--accent);color:#000;}
+.btn-p:hover{background:var(--accent2);}
+.btn-g{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-g:hover{color:var(--text);}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+/* STAR INPUT */
+.star-inp{display:flex;gap:6px;margin-bottom:4px;}
+.ss{font-size:22px;cursor:pointer;color:var(--border);transition:color .1s;}
+.ss.on{color:var(--star);}
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:rgba(30,35,50,.97);border:1px solid var(--border);border-left:3px solid var(--danger);color:#fff;border-radius:10px;padding:13px 17px;font-size:13px;box-shadow:0 4px 24px rgba(0,0,0,.5);z-index:200;display:none;max-width:320px;}
+.toast.show{display:block;animation:si .3s ease;}
+.toast .tt{font-size:14px;font-weight:700;margin-bottom:3px;}
+.toast .ts{font-size:12px;opacity:.8;}
+.toast.ok{border-left-color:var(--success);}
+@keyframes si{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:13px;}
+.tab{padding:5px 13px;border-radius:6px;border:none;background:none;color:var(--text3);font-family:'Noto Sans TC',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.tab.on{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+/* empty */
+.empty{text-align:center;padding:40px;color:var(--text3);}
+.empty .ei{font-size:34px;margin-bottom:10px;}
+/* number input */
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+/* LINE */
+.line-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;}
+.line-card-hdr{padding:11px 15px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:rgba(0,195,0,.05);}
+.line-card-hdr .ln{font-size:16px;}
+.line-card-hdr h4{font-size:13px;font-weight:600;flex:1;}
+.line-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.line-status.set{background:rgba(34,197,94,.13);color:var(--success);border:1px solid rgba(34,197,94,.25);}
+.line-status.unset{background:rgba(148,163,184,.1);color:var(--text3);border:1px solid var(--border);}
+.line-card-body{padding:13px 15px;display:flex;gap:9px;align-items:center;}
+.line-card-body input{flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;}
+.line-card-body input:focus{border-color:#00c300;}
+.line-card-body input::placeholder{color:var(--text3);font-size:11px;}
+.btn-line{padding:7px 13px;border-radius:7px;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:600;background:#00b900;color:#fff;transition:all .15s;}
+.btn-line:hover{background:#00c900;}
+.btn-line-ghost{padding:7px 11px;border-radius:7px;border:1px solid rgba(0,185,0,.3);cursor:pointer;font-size:12px;background:rgba(0,185,0,.08);color:#00b900;font-family:'Noto Sans TC',sans-serif;transition:all .15s;}
+.btn-line-ghost:hover{background:rgba(0,185,0,.15);}
+.send-log{margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;max-height:160px;overflow-y:auto;}
+.log-row{font-size:11px;font-family:'Space Mono',monospace;color:var(--text2);padding:2px 0;border-bottom:1px solid var(--border);}
+.log-row:last-child{border-bottom:none;}
+.log-row.ok{color:var(--success);}
+.log-row.err{color:var(--danger);}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <h1>🍲 鍋泰暖</h1>
+    <span>評論監控系統</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-lbl">主選單</div>
+    <button class="nav-btn active" onclick="go('dash')"><span class="ic">📊</span><span>總覽儀表板</span></button>
+    <button class="nav-btn" onclick="go('stores')"><span class="ic">🏪</span><span>門店管理</span></button>
+    <button class="nav-btn" onclick="go('reviews')"><span class="ic">💬</span><span>所有評論</span><span class="badge" id="b-unr">0</span></button>
+    <button class="nav-btn" onclick="go('alerts')"><span class="ic">🔔</span><span>低分提醒</span><span class="badge warn" id="b-low">0</span></button>
+    <div class="nav-lbl" style="margin-top:8px">設定</div>
+    <button class="nav-btn" onclick="go('settings')"><span class="ic">⚙️</span><span>提醒設定</span></button>
+    <button class="nav-btn" onclick="go('line')"><span class="ic">💚</span><span>Line 提醒設定</span></button>
+    <button class="nav-btn" onclick="go('weekly')"><span class="ic">📈</span><span>週報 / 四週評分</span></button>
+  </nav>
+  <div class="sidebar-foot">
+    <button class="btn btn-g" style="width:100%;font-size:12px;" onclick="openAddRev()">＋ 新增評論</button>
+  </div>
+</aside>
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <h2 id="page-title">總覽儀表板</h2>
+    <div class="topbar-clock" id="clock">--:--:--</div>
+    <button class="btn btn-p" style="font-size:12px;" onclick="refresh()">🔄 更新</button>
+  </div>
+  <div class="content" id="content"></div>
+</main>
+</div>
+
+<!-- ADD REVIEW MODAL -->
+<div class="overlay" id="rev-modal" style="display:none">
+  <div class="modal">
+    <h3>新增評論記錄</h3>
+    <p>手動輸入從 Google Maps 抄錄的評論</p>
+    <div class="fg"><label>門店 *</label><select id="r-store"></select></div>
+    <div class="fg"><label>評論者名稱</label><input id="r-author" placeholder="例：王小明"/></div>
+    <div class="fg">
+      <label>星數評分 *</label>
+      <div class="star-inp" id="star-inp">
+        <span class="ss" data-v="1" onclick="setStar(1)">★</span>
+        <span class="ss" data-v="2" onclick="setStar(2)">★</span>
+        <span class="ss" data-v="3" onclick="setStar(3)">★</span>
+        <span class="ss" data-v="4" onclick="setStar(4)">★</span>
+        <span class="ss" data-v="5" onclick="setStar(5)">★</span>
+      </div>
+    </div>
+    <div class="fg"><label>評論內容</label><textarea id="r-txt" rows="3" placeholder="評論文字（可留空）"></textarea></div>
+    <div class="fg"><label>評論日期</label><input id="r-date" type="date"/></div>
+    <div class="fg"><label>回覆狀態</label>
+      <select id="r-rep"><option value="0">尚未回覆</option><option value="1">已回覆</option></select>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="closeModal('rev-modal')">取消</button>
+      <button class="btn btn-p" onclick="addRev()">新增評論</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="tt" id="t-ttl"></div><div class="ts" id="t-sub"></div></div>
+
+<script>
+// ── STATE ──
+const SK = 'gtw_v3';
+let curView = 'dash', selStar = 0;
+let alarmOn = true, alarmH = 21, alarmM = 50;
+let lastAlarmDate = '';
+// globalLineToken: 總部統一 Token（可在設定頁設定）
+let globalLineToken = '';
+let globalLineGroupId = ''; // Line Group/Room ID
+
+// Real store data — lineToken 各門店可獨立設定 Line Notify Token
+const DEFAULT_STORES = [
+  {id:1, name:'彰化員林初始店', region:'彰化', link:'https://maps.app.goo.gl/YuanlinStore', mapsId:'ChIJbavd6fg3aTQR5hMU5gekxyo', rating:4.8, ratingCount:5180, lineToken:''},
+  {id:2, name:'桃園中壢店',     region:'桃園', link:'https://maps.app.goo.gl/ZhongliStore',  mapsId:'ChIJ1fSYSgcjaDQRoUvZ_2IQl8k', rating:4.9, ratingCount:1779, lineToken:''},
+  {id:3, name:'台中崇德店',     region:'台中', link:'https://maps.app.goo.gl/ChongdeStore',  mapsId:'ChIJKxQ-X2wXaTQRsX6ns-3k13s', rating:4.8, ratingCount:4991, lineToken:''},
+  {id:4, name:'台中大里店',     region:'台中', link:'https://maps.app.goo.gl/DaliStore',     mapsId:'ChIJG_RnPxA9aTQR70aikPM7D2o', rating:4.8, ratingCount:2015, lineToken:''},
+  {id:5, name:'台中豐原店',     region:'台中', link:'https://maps.app.goo.gl/FengyuanStore', mapsId:'ChIJmVN4OwARaTQR0O5BZTtIWhU', rating:4.7, ratingCount:503,  lineToken:''},
+  {id:6, name:'新北土城店',     region:'新北', link:'https://www.google.com/maps/place/?q=place_id:ChIJWf0JXAAdaDQRKtqqLGpRaqk', mapsId:'ChIJWf0JXAAdaDQRKtqqLGpRaqk', rating:4.7, ratingCount:106, lineToken:''},
+];
+
+function loadData() {
+  const raw = localStorage.getItem(SK);
+  if (raw) return JSON.parse(raw);
+  return {
+    stores: DEFAULT_STORES,
+    reviews: [
+      {id:1,  storeId:1, author:'林先生', stars:5, txt:'冬蔭功湯底超棒！酸辣很到位，肉質新鮮，下次還要來。',      date:'2025-06-10', replied:true,  replyTxt:'謝謝您的支持！歡迎再度光臨 🙏'},
+      {id:2,  storeId:1, author:'陳小姐', stars:2, txt:'等位等了快一小時，服務生態度有點差，有點失望。',         date:'2025-06-12', replied:false},
+      {id:3,  storeId:1, author:'黃先生', stars:4, txt:'整體不錯，停車比較麻煩，希望可以改善。',                date:'2025-06-13', replied:true,  replyTxt:'感謝建議，我們會持續改善停車引導！'},
+      {id:4,  storeId:2, author:'王小明', stars:1, txt:'桌子不乾淨，服務人員不理人，完全不想再來了。',          date:'2025-06-11', replied:false},
+      {id:5,  storeId:2, author:'李美花', stars:5, txt:'食材非常新鮮！椰奶湯底好喝到不行，一定會再來！',        date:'2025-06-14', replied:true,  replyTxt:'謝謝您❤️ 期待您的再次光臨！'},
+      {id:6,  storeId:3, author:'張大偉', stars:3, txt:'口味還行，但份量感覺越來越少了。',                      date:'2025-06-12', replied:false},
+      {id:7,  storeId:3, author:'劉美華', stars:5, txt:'推薦！環境好、食材新鮮，服務也很親切！',               date:'2025-06-13', replied:false},
+      {id:8,  storeId:3, author:'吳志文', stars:4, txt:'很好吃，榴槤冰淇淋是亮點，下次還要帶朋友來！',         date:'2025-06-14', replied:true,  replyTxt:'謝謝您的推薦，榴槤冰淇淋是我們的招牌❤️'},
+      {id:9,  storeId:4, author:'林太太', stars:2, txt:'點了套餐結果等了超久，中間服務生還搞錯餐點。',          date:'2025-06-10', replied:false},
+      {id:10, storeId:4, author:'陳先生', stars:5, txt:'南洋風味道地，湯頭很濃郁，食材也很新鮮！',             date:'2025-06-11', replied:true,  replyTxt:'感謝您！我們用心熬製的湯頭終於被看見了 😊'},
+      {id:11, storeId:5, author:'趙小姐', stars:3, txt:'在家樂福裡面，空間比較小，但湯底很不錯。',             date:'2025-06-13', replied:false},
+      {id:12, storeId:5, author:'周先生', stars:4, txt:'CP值不錯！松露泰式鍋底很香，下次還要來！',             date:'2025-06-14', replied:false},
+    ],
+    nextId: 13,
+  };
+}
+function save(d){
+  // persist globalLineToken alongside data
+  const payload = Object.assign({}, d, {_globalLineToken: globalLineToken, _globalLineGroupId: globalLineGroupId});
+  localStorage.setItem(SK, JSON.stringify(payload));
+}
+function loadGlobalToken(){
+  const raw = localStorage.getItem(SK);
+  if(raw){ const p=JSON.parse(raw); if(p._globalLineToken) globalLineToken=p._globalLineToken;
+    if(p._globalLineGroupId) globalLineGroupId=p._globalLineGroupId; }
+}
+let D = loadData();
+
+// ── UTILS ──
+function stars(n, sz='13px'){
+  return `<div class="stars">${[1,2,3,4,5].map(i=>`<span class="si" style="color:${i<=n?'#fbbf24':'#2d3452'};font-size:${sz}">★</span>`).join('')}</div>`;
+}
+function store(id){ return D.stores.find(s=>s.id===id); }
+function storeStats(sid){
+  const rs = D.reviews.filter(r=>r.storeId===sid);
+  const unr = rs.filter(r=>!r.replied);
+  const lowUnr = rs.filter(r=>r.stars<=3&&!r.replied);
+  const avg = rs.length ? (rs.reduce((a,r)=>a+r.stars,0)/rs.length).toFixed(1) : '-';
+  return {rs, unr, lowUnr, avg};
+}
+function fmtDate(s){ return s ? s.replace(/-/g,'/') : '-'; }
+function toast(ttl, sub, ok=false){
+  const t=document.getElementById('toast');
+  document.getElementById('t-ttl').textContent=ttl;
+  document.getElementById('t-sub').textContent=sub;
+  t.classList.toggle('ok', ok);
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 4500);
+}
+function badges(){
+  const unr = D.reviews.filter(r=>!r.replied).length;
+  const low = D.reviews.filter(r=>r.stars<=3&&!r.replied).length;
+  document.getElementById('b-unr').textContent=unr;
+  document.getElementById('b-low').textContent=low;
+}
+
+// ── CLOCK + ALARM ──
+function tick(){
+  const now = new Date();
+  const hh=String(now.getHours()).padStart(2,'0'),
+        mm=String(now.getMinutes()).padStart(2,'0'),
+        ss=String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=`${hh}:${mm}:${ss}`;
+  const today=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  checkWeeklyReport();
+  if(alarmOn && now.getHours()===alarmH && now.getMinutes()===alarmM && today!==lastAlarmDate){
+    lastAlarmDate=today; fireAlarm();
+  }
+}
+setInterval(tick,1000); tick();
+
+async function fireAlarm(){
+  const items = D.reviews.filter(r=>r.stars<=3&&!r.replied);
+  if(!items.length){ toast('✅ 今日無低分未回覆評論','',true); return; }
+  const names = [...new Set(items.map(r=>store(r.storeId)?.name))].filter(Boolean);
+  toast(`⚠️ ${items.length} 則低分評論尚未回覆`, names.slice(0,3).join('、')+(names.length>3?`…等 ${names.length} 間`:''), false);
+  // Also fire Line Notify
+  const sent = await fireLineAlerts();
+  if(sent>0) toast(`💚 Line 提醒已發送至 ${sent} 個群組`,'',true);
+}
+
+// ── VIEWS ──
+function go(v){
+  curView=v;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const map={dash:0,stores:1,reviews:2,alerts:3,settings:4};
+  const btns=document.querySelectorAll('.nav-btn');
+  if(btns[map[v]]) btns[map[v]].classList.add('active');
+  const titles={dash:'總覽儀表板',stores:'門店管理',reviews:'所有評論',alerts:'低分提醒',settings:'提醒設定',line:'Line 提醒設定',weekly:'週報 — 四週評分趨勢'};
+  document.getElementById('page-title').textContent=titles[v]||v;
+  const el=document.getElementById('content');
+  if(v==='dash') renderDash(el);
+  else if(v==='stores') renderStores(el);
+  else if(v==='reviews') renderReviews(el);
+  else if(v==='alerts') renderAlerts(el);
+  else if(v==='settings') renderSettings(el);
+  else if(v==='line') renderLine(el);
+  else if(v==='weekly') renderWeekly(el);
+}
+
+// ── DASHBOARD ──
+function renderDash(el){
+  const totalRev = D.reviews.length;
+  const unr = D.reviews.filter(r=>!r.replied).length;
+  const lowUnr = D.reviews.filter(r=>r.stars<=3&&!r.replied).length;
+  const avg = totalRev ? (D.reviews.reduce((a,r)=>a+r.stars,0)/totalRev).toFixed(1) : '-';
+
+  let rows='';
+  D.stores.forEach(s=>{
+    const st=storeStats(s.id);
+    const lu=st.lowUnr.length;
+    const mapsUrl=`https://www.google.com/maps/place/?q=place_id:${s.mapsId}`;
+    rows+=`<tr>
+      <td><span class="store-nm">${s.name}</span></td>
+      <td><span style="color:var(--text3);font-size:11px">${s.region}</span></td>
+      <td>${st.rs.length}</td>
+      <td style="white-space:nowrap">${stars(Math.round(Number(st.avg)))} <span style="font-family:'Space Mono';font-size:12px;color:var(--warn)">${st.avg}</span></td>
+      <td>${st.unr.length>0?`<span class="pill unr">⚠ ${st.unr.length} 則</span>`:`<span class="pill rep">✓ 全數已覆</span>`}</td>
+      <td>${lu>0?`<span class="pill wrn">🔴 ${lu} 則</span>`:`<span style="color:var(--text3);font-size:12px">—</span>`}</td>
+      <td><a class="lbtn" href="${mapsUrl}" target="_blank">📍 Google Maps</a></td>
+    </tr>`;
+  });
+
+  const recent=[...D.reviews].sort((a,b)=>b.date?.localeCompare(a.date)).slice(0,6);
+  let revHtml='';
+  recent.forEach(r=>{
+    const s=store(r.storeId);
+    const cls=r.stars<=2?'low':r.stars===3?'mid':'';
+    revHtml+=`<div class="rev-card ${cls}">
+      <div class="rev-meta">
+        <div class="rev-store">${s?.name||'-'}</div>
+        <div class="rev-author">${r.author||'匿名'}</div>
+        <div class="rev-date">${fmtDate(r.date)}</div>
+        <div style="margin-top:5px">${stars(r.stars,'14px')}</div>
+      </div>
+      <div class="rev-body">
+        <div class="rev-txt">${r.txt||'<em style="color:var(--text3)">（無文字評論）</em>'}</div>
+        ${r.replied&&r.replyTxt?`<div class="rev-reply"><div class="rl">官方回覆</div>${r.replyTxt}</div>`:''}
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          ${r.replied?`<span class="pill rep">✓ 已回覆</span>`:`<span class="pill unr">⚠ 尚未回覆</span>`}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML=`
+  <div class="stats-grid">
+    <div class="stat-card acc"><div class="lbl">門店總數</div><div class="val">${D.stores.length}</div><div class="sub">全台各地</div></div>
+    <div class="stat-card"><div class="lbl">總評論數</div><div class="val">${totalRev}</div><div class="sub">平均 ${avg} ★</div></div>
+    <div class="stat-card dan"><div class="lbl">未回覆評論</div><div class="val">${unr}</div><div class="sub">待處理</div></div>
+    <div class="stat-card wrn"><div class="lbl">低分未回覆</div><div class="val">${lowUnr}</div><div class="sub">≤ 3 顆星</div></div>
+  </div>
+  <div class="sec">門店評論彙整一覽</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>門店</th><th>區域</th><th>評論數</th><th>評分</th><th>未回覆</th><th>低分未回覆</th><th>地圖</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div class="sec">最新評論</div>
+  <div class="rev-grid">${revHtml||'<div class="empty"><div class="ei">💬</div><p>尚無評論</p></div>'}</div>`;
+}
+
+// ── STORES ──
+function renderStores(el){
+  let rows='';
+  D.stores.forEach(s=>{
+    const st=storeStats(s.id);
+    const mapsUrl=`https://www.google.com/maps/place/?q=place_id:${s.mapsId}`;
+    rows+=`<tr>
+      <td><span class="store-nm">${s.name}</span></td>
+      <td>${s.region}</td>
+      <td>${st.rs.length}</td>
+      <td style="white-space:nowrap">${stars(Math.round(Number(st.avg)))} <span style="font-family:'Space Mono';font-size:12px;color:var(--warn)">${st.avg}</span></td>
+      <td>${st.unr.length>0?`<span class="pill unr">⚠ ${st.unr.length}</span>`:`<span class="pill rep">✓</span>`}</td>
+      <td><a class="lbtn" href="${mapsUrl}" target="_blank">📍 地圖</a></td>
+      <td>
+        <button class="lbtn" style="background:rgba(245,158,11,.1);color:var(--warn);border-color:rgba(245,158,11,.3)" onclick="viewStoreRevs(${s.id})">評論</button>
+      </td>
+    </tr>`;
+  });
+  el.innerHTML=`
+  <div class="sec">已登錄門店（${D.stores.length} 間）</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>門店名稱</th><th>區域</th><th>評論數</th><th>評分</th><th>未回覆</th><th>Maps</th><th>操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">尚無門店</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── REVIEWS ──
+let fStore=null, fStar=null;
+function viewStoreRevs(id){ fStore=id; fStar=null; go('reviews'); }
+
+function renderReviews(el){
+  let rs=[...D.reviews].sort((a,b)=>b.date?.localeCompare(a.date));
+  if(fStore) rs=rs.filter(r=>r.storeId===fStore);
+  if(fStar===12) rs=rs.filter(r=>r.stars<=2);
+  else if(fStar===3) rs=rs.filter(r=>r.stars===3);
+
+  const tabHtml=`<div class="tabs">
+    <button class="tab ${!fStar?'on':''}" onclick="fStore=null;fStar=null;renderReviews(document.getElementById('content'))">全部 (${D.reviews.length})</button>
+    <button class="tab ${fStar===12?'on':''}" onclick="fStar=12;renderReviews(document.getElementById('content'))">★★ 以下</button>
+    <button class="tab ${fStar===3?'on':''}" onclick="fStar=3;renderReviews(document.getElementById('content'))">★★★ 三顆星</button>
+    ${fStore?`<button class="tab on" onclick="fStore=null;renderReviews(document.getElementById('content'))">✕ ${store(fStore)?.name}</button>`:''}
+  </div>`;
+
+  let html='';
+  rs.forEach(r=>{
+    const s=store(r.storeId);
+    const cls=r.stars<=2?'low':r.stars===3?'mid':'';
+    html+=`<div class="rev-card ${cls}">
+      <div class="rev-meta">
+        <div class="rev-store">${s?.name||'-'}</div>
+        <div class="rev-author">${r.author||'匿名'}</div>
+        <div class="rev-date">${fmtDate(r.date)}</div>
+        <div style="margin-top:5px">${stars(r.stars,'14px')}</div>
+      </div>
+      <div class="rev-body">
+        <div class="rev-txt">${r.txt||'<em style="color:var(--text3)">（無文字評論）</em>'}</div>
+        ${r.replied&&r.replyTxt?`<div class="rev-reply"><div class="rl">官方回覆</div>${r.replyTxt}</div>`:''}
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${r.replied?`<span class="pill rep">✓ 已回覆</span>`:`<span class="pill unr">⚠ 尚未回覆</span> <button class="lbtn" onclick="markReplied(${r.id})" style="font-size:11px">標記已回覆</button>`}
+          <button class="lbtn" onclick="delRev(${r.id})" style="background:rgba(239,68,68,.08);color:var(--danger);border-color:rgba(239,68,68,.22);font-size:11px;margin-left:auto">刪除</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=tabHtml+`<div class="rev-grid">${html||'<div class="empty"><div class="ei">💬</div><p>此條件無評論</p></div>'}</div>`;
+}
+
+// ── ALERTS ──
+function renderAlerts(el){
+  const items=D.reviews.filter(r=>r.stars<=3&&!r.replied).sort((a,b)=>a.stars-b.stars);
+  const aH=String(alarmH).padStart(2,'0'), aM=String(alarmM).padStart(2,'0');
+  let html='';
+  items.forEach(r=>{
+    const s=store(r.storeId);
+    const cls=r.stars<=2?'low':'mid';
+    html+=`<div class="rev-card ${cls}">
+      <div class="rev-meta">
+        <div class="rev-store">${s?.name||'-'}</div>
+        <div class="rev-author">${r.author||'匿名'}</div>
+        <div class="rev-date">${fmtDate(r.date)}</div>
+        <div style="margin-top:5px">${stars(r.stars,'14px')}</div>
+      </div>
+      <div class="rev-body">
+        <div class="rev-txt">${r.txt||'<em style="color:var(--text3)">（無文字評論）</em>'}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <span class="pill unr">⚠ 尚未回覆</span>
+          <button class="lbtn" onclick="markReplied(${r.id})" style="font-size:11px">標記已回覆</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=`
+  <div class="alarm-bar">
+    <div class="ai">⏰</div>
+    <div class="info"><h3>每日低分提醒</h3><p>≤ 3 顆星且未回覆，每天 ${aH}:${aM} 通知</p></div>
+    <div class="time-chip">${aH}:${aM}</div>
+    <div class="${alarmOn?'toggle':'toggle off'}" id="alm-tog" onclick="toggleAlarm(this)">
+      ${alarmOn?'✅ 提醒已開啟':'⭕ 提醒已關閉'}
+    </div>
+  </div>
+  <div class="alert-pnl">
+    <div class="alert-hdr">
+      <span>🔴</span>
+      <h3>待處理低分評論 — ${items.length} 則</h3>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">${new Date().toLocaleDateString('zh-TW')}</span>
+    </div>
+    ${items.map(r=>{
+      const s=store(r.storeId);
+      return `<div class="alert-item">
+        <div class="adot"></div>
+        <div class="atxt"><strong>${s?.name}</strong> — ${r.author||'匿名'} ★${r.stars} ${r.txt?`「${r.txt.slice(0,28)}${r.txt.length>28?'…':''}」`:''}</div>
+        <button class="lbtn" onclick="markReplied(${r.id})" style="font-size:11px">標記已回覆</button>
+      </div>`;
+    }).join('')||`<div style="padding:20px;text-align:center;color:var(--success)">✅ 目前沒有低分未回覆評論！</div>`}
+  </div>
+  <div class="sec">低分評論詳情</div>
+  <div class="rev-grid">${html||'<div class="empty"><div class="ei">✅</div><p>目前沒有低分未回覆評論</p></div>'}</div>`;
+}
+
+// ── LINE MESSAGING API ──
+let sendLog = [];
+
+function renderLine(el){
+  const aH=String(alarmH).padStart(2,'0'), aM=String(alarmM).padStart(2,'0');
+  const tok = globalLineToken;    // Channel Access Token
+  const gid = globalLineGroupId;  // Group / Room ID
+  const isReady = !!(tok && gid);
+
+  const logRows = sendLog.length
+    ? sendLog.slice(-15).reverse().map(l=>`<div class="log-row ${l.ok?'ok':'err'}">${l.time} ${l.ok?'✓':'✗'} ${l.msg}</div>`).join('')
+    : '<div style="color:var(--text3);font-size:12px;padding:4px 0">尚無發送記錄</div>';
+
+  el.innerHTML = `
+  <div class="alarm-bar" style="border-left:3px solid #00b900;margin-bottom:20px;gap:16px">
+    <div style="font-size:28px">💚</div>
+    <div class="info">
+      <h3 style="font-size:15px">Line Messaging API — 群組通知</h3>
+      <p>取代已停止服務的 Line Notify。每天 <strong style="color:var(--warn)">${aH}:${aM}</strong>
+      自動將所有門店低分評論匯總推播至指定 Line 群組。</p>
+    </div>
+    <span class="line-status ${isReady?'set':'unset'}" style="font-size:13px;padding:4px 12px">
+      ${isReady?'✅ 已設定':'⭕ 未設定'}
+    </span>
+  </div>
+
+  <div class="sec">API 設定</div>
+  <div class="line-card" style="margin-bottom:12px">
+    <div class="line-card-hdr"><span class="ln">🔑</span><h4>Channel Access Token</h4></div>
+    <div class="line-card-body">
+      <input id="g-token" placeholder="貼上 Channel Access Token（長字串）" value="${tok}" style="font-size:12px;font-family:'Space Mono',monospace"/>
+    </div>
+  </div>
+  <div class="line-card" style="margin-bottom:20px">
+    <div class="line-card-hdr"><span class="ln">👥</span><h4>Group ID（推播目標群組）</h4></div>
+    <div class="line-card-body" style="flex-direction:column;align-items:stretch;gap:10px">
+      <input id="g-gid" placeholder="貼上 Line 群組 ID（格式：C開頭的字串）" value="${gid}" style="font-family:'Space Mono',monospace;font-size:12px"/>
+      <div style="display:flex;gap:8px">
+        <button class="btn-line" onclick="saveLineSettings()" style="flex:1">💾 儲存設定</button>
+        <button class="btn-line-ghost" onclick="testLineMsg()" ${!isReady?'disabled style="opacity:.4;cursor:not-allowed"':''}>🔔 發送測試</button>
+        <button class="btn-line-ghost" onclick="sendAllStoresAlert()" ${!isReady?'disabled style="opacity:.4;cursor:not-allowed"':''} style="white-space:nowrap">📤 立即發送匯總</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">設定步驟（已有 Line 官方帳號）</div>
+  <div class="tbl-wrap" style="margin-bottom:20px">
+    <table><tbody>
+      <tr>
+        <td style="width:32px;color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">1</td>
+        <td>
+          前往 <a href="https://developers.line.biz/console/" target="_blank" style="color:#00b900;font-weight:600">LINE Developers Console</a> 登入<br>
+          <span style="color:var(--text3);font-size:11px">→ 找到你的官方帳號對應的 <strong style="color:var(--text2)">Messaging API Channel</strong>（通常已存在）</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">2</td>
+        <td>
+          點入 Channel → 選「<strong style="color:var(--text)">Messaging API</strong>」分頁<br>
+          → 滾到底部找 <strong style="color:var(--text)">Channel access token</strong> → 點「<strong style="color:var(--text)">Issue</strong>」發行（或複製現有的）<br>
+          <span style="color:var(--text3);font-size:11px">→ 複製這串 Token 貼入上方「Channel Access Token」欄位</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">3</td>
+        <td>
+          將官方帳號 Bot <strong style="color:var(--text)">邀入員工 Line 群組</strong><br>
+          → 在 LINE OA Manager 找到 Bot 的 QR Code 或 ID，讓群組管理員掃碼加入<br>
+          <span style="color:var(--text3);font-size:11px">→ 確認群組中可以看到「鍋泰暖已加入」的提示</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">4</td>
+        <td>
+          取得 <strong style="color:var(--text)">Group ID</strong>（三選一）：<br>
+          <div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
+            <div style="background:var(--surface2);border-radius:6px;padding:7px 10px;font-size:12px">
+              <strong style="color:var(--accent2)">方法 A（最快）</strong> — 前往 <a href="https://webhook.site" target="_blank" style="color:var(--blue2)">webhook.site</a>，複製你的臨時 URL → 在 LINE Developers Console 的 Webhook URL 欄位貼上 → 在員工群組發任意訊息 → 回到 webhook.site，找 JSON 裡的 <code style="background:var(--surface);padding:1px 5px;border-radius:3px">source.groupId</code> 值
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:7px 10px;font-size:12px">
+              <strong style="color:var(--accent2)">方法 B</strong> — 在群組叫出 Bot，請 Bot 回報自己的 Group ID（需先在 Bot 加入事件時 log groupId）
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;padding:7px 10px;font-size:12px">
+              <strong style="color:var(--accent2)">方法 C</strong> — 若有使用 <a href="https://manager.line.biz" target="_blank" style="color:var(--blue2)">LINE OA Manager</a>，部分版本可在「聊天」→「群組」直接看到 Group ID
+            </div>
+          </div>
+          <span style="color:var(--text3);font-size:11px;display:block;margin-top:5px">Group ID 格式為大寫 C 開頭的 33 字元字串，例：<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">C1234567890abcdef...</code></span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">5</td>
+        <td>
+          確認 LINE OA Manager 的「<strong style="color:var(--text)">回應設定</strong>」<br>
+          → 關閉「自動回應訊息」、關閉「加入好友的歡迎訊息」（避免 Bot 亂回覆）<br>
+          <span style="color:var(--text3);font-size:11px">→ 路徑：LINE OA Manager → 回應 → 回應設定</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:700;font-family:'Space Mono',monospace;font-size:15px">6</td>
+        <td>
+          回到本系統，儲存 Token 與 Group ID → 點「🔔 發送測試」<br>
+          → 員工群組收到測試訊息 → <strong style="color:var(--success)">完成！每天 21:50 自動通知 🎉</strong>
+        </td>
+      </tr>
+    </tbody></table>
+  </div>
+
+  <div class="sec">費用說明</div>
+  <div class="alarm-bar" style="margin-bottom:20px;padding:13px 15px">
+    <div style="font-size:20px">💰</div>
+    <div class="info">
+      <h3>免費方案每月 200 則訊息</h3>
+      <p>6 間門店 × 每天 1 則 = 每月約 30 則，<strong style="color:var(--success)">免費方案完全夠用</strong>。超過才需要付費升級。</p>
+    </div>
+    <a class="lbtn" href="https://developers.line.biz/en/docs/messaging-api/overview/" target="_blank">查看費率</a>
+  </div>
+
+  <div class="sec">每日通知預覽</div>
+  <div class="line-card" style="margin-bottom:20px">
+    <div class="line-card-hdr"><span class="ln">📋</span><h4>訊息格式</h4></div>
+    <div style="padding:14px 16px;font-size:12px;line-height:2;color:var(--text2);white-space:pre-wrap;font-family:'Space Mono',monospace">⚠️ 鍋泰暖每日評論報告
+06/15 — 共 3 則低分未回覆
+─────────────────
+🏪 台中崇德店（1則）
+  1. ★★★☆☆ 張大偉
+     「口味還行，但份量感覺越來越…」
+🏪 桃園中壢店（1則）
+  1. ★☆☆☆☆ 王小明
+     「桌子不乾淨，服務人員不理人…」
+─────────────────
+請各門店盡快回覆 Google 評論！</div>
+  </div>
+
+  <div class="sec">發送記錄</div>
+  <div class="send-log">${logRows}</div>`;
+}
+
+function saveLineSettings(){
+  globalLineToken   = (document.getElementById('g-token').value||'').trim();
+  globalLineGroupId = (document.getElementById('g-gid').value||'').trim();
+  save(D);
+  toast('💚 設定已儲存！','點「發送測試」確認群組有收到訊息',true);
+  renderLine(document.getElementById('content'));
+}
+
+// ── Build notification message ──
+function buildGlobalMsg(){
+  const today = new Date().toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit'});
+  const allLow = D.reviews.filter(r=>r.stars<=3&&!r.replied);
+  if(!allLow.length){
+    return `✅ 鍋泰暖 ${today} 每日報告\n所有門店低分評論均已回覆，一切正常！`;
+  }
+  let msg=`⚠️ 鍋泰暖每日評論報告\n${today} — 共 ${allLow.length} 則低分未回覆\n─────────────────\n`;
+  D.stores.forEach(s=>{
+    const items=allLow.filter(r=>r.storeId===s.id);
+    if(!items.length) return;
+    msg+=`\n🏪 ${s.name}（${items.length}則）\n`;
+    items.forEach((r,i)=>{
+      const st='★'.repeat(r.stars)+'☆'.repeat(5-r.stars);
+      const snip=r.txt?(r.txt.length>22?r.txt.slice(0,22)+'…':r.txt):'無文字評論';
+      msg+=`  ${i+1}. ${st} ${r.author||'匿名'}\n     「${snip}」\n`;
+    });
+  });
+  msg+='─────────────────\n請各門店盡快回覆 Google 評論！';
+  return msg;
+}
+
+// ── Messaging API push via Google Apps Script proxy ──
+const GAS_PROXY = 'https://script.google.com/macros/s/AKfycbwnzIG1UAmLkac8NOirmsuYhJkNEAF-R3yHCyOSlD9mcweEH0zJ6hyYLcSzENaXjIDOKQ/exec';
+
+async function lineMessagingSend(message){
+  if(!globalLineToken||!globalLineGroupId) return false;
+  try{
+    const res = await fetch(GAS_PROXY, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        token:   globalLineToken,
+        groupId: globalLineGroupId,
+        message: message
+      })
+    });
+    const data = await res.json().catch(()=>({ok:false}));
+    return data.ok === true;
+  }catch(e){ return false; }
+}
+
+function logSend(msg, ok){
+  const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  sendLog.push({time:t, msg, ok});
+}
+
+async function testLineMsg(){
+  if(!globalLineToken||!globalLineGroupId){toast('請先填入 Token 與 Group ID','');return;}
+  toast('💚 發送測試中…','');
+  const aH=String(alarmH).padStart(2,'0'), aM=String(alarmM).padStart(2,'0');
+  const ok=await lineMessagingSend(`🔔 鍋泰暖評論監控 — 測試成功！\nLine Messaging API 已正常連線。\n每天 ${aH}:${aM} 將自動發送低分評論提醒。`);
+  if(ok){toast('✅ 測試成功！','群組已收到訊息',true);logSend('測試訊息',true);}
+  else{toast('❌ 發送失敗','請確認 Token 與 Group ID 是否正確');logSend('測試失敗',false);}
+  renderLine(document.getElementById('content'));
+}
+
+async function sendAllStoresAlert(){
+  if(!globalLineToken||!globalLineGroupId){toast('請先完成 Line 設定','');return;}
+  const msg=buildGlobalMsg();
+  toast('💚 發送中…','');
+  const ok=await lineMessagingSend(msg);
+  if(ok){toast('✅ 今日匯總已發送！','',true);logSend('手動發送匯總',true);}
+  else{toast('❌ 發送失敗','請確認設定');logSend('手動發送失敗',false);}
+  renderLine(document.getElementById('content'));
+}
+
+async function fireLineAlerts(){
+  if(!globalLineToken||!globalLineGroupId) return;
+  const msg=buildGlobalMsg();
+  const ok=await lineMessagingSend(msg);
+  logSend('定時自動發送', ok);
+}
+
+// ── SETTINGS ──
+function renderSettings(el){
+  const aH=String(alarmH).padStart(2,'0'), aM=String(alarmM).padStart(2,'0');
+  el.innerHTML=`
+  <div class="sec">每日提醒時間</div>
+  <div class="alarm-bar" style="flex-direction:column;align-items:flex-start;gap:13px">
+    <div style="display:flex;align-items:center;gap:13px;width:100%">
+      <div class="ai">⏰</div>
+      <div class="info"><h3>低分提醒時間設定</h3><p>每天此時間提醒尚未回覆的 ≤ 3 顆星評論</p></div>
+    </div>
+    <div style="display:flex;gap:11px;align-items:flex-end">
+      <div class="fg" style="margin:0"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">時 (0-23)</label>
+        <input type="number" id="s-h" min="0" max="23" value="${alarmH}" style="width:72px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:16px;text-align:center;outline:none"/></div>
+      <span style="font-size:22px;color:var(--warn);font-family:'Space Mono',monospace;padding-bottom:6px">:</span>
+      <div class="fg" style="margin:0"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">分 (0-59)</label>
+        <input type="number" id="s-m" min="0" max="59" value="${alarmM}" style="width:72px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:16px;text-align:center;outline:none"/></div>
+      <button class="btn btn-p" onclick="saveAlarm()" style="padding:8px 16px">儲存</button>
+    </div>
+  </div>
+
+  <div style="margin-top:13px">
+    <div class="alarm-bar" style="padding:13px 15px">
+      <div class="ai">🔔</div>
+      <div class="info"><h3>提醒開關</h3><p>關閉後不顯示每日通知</p></div>
+      <div class="${alarmOn?'toggle':'toggle off'}" id="sett-tog" onclick="toggleAlarm(this)">${alarmOn?'✅ 已開啟':'⭕ 已關閉'}</div>
+    </div>
+  </div>
+
+  <div style="margin-top:13px">
+    <div class="alarm-bar" style="padding:13px 15px">
+      <div class="ai">🧪</div>
+      <div class="info"><h3>立即測試提醒</h3><p>模擬 ${aH}:${aM} 的通知效果</p></div>
+      <button class="btn btn-g" onclick="fireAlarm()">立即測試</button>
+    </div>
+  </div>
+
+  <div style="margin-top:13px">
+    <div class="alarm-bar" style="padding:13px 15px">
+      <div class="ai">🔗</div>
+      <div class="info"><h3>自動抓取設定</h3><p>需申請 Google Business Profile API 並部署 Apps Script</p></div>
+      <a class="lbtn" href="https://business.google.com" target="_blank">前往商家後台</a>
+    </div>
+  </div>`;
+}
+
+// ── ACTIONS ──
+function saveAlarm(){
+  const h=parseInt(document.getElementById('s-h').value);
+  const m=parseInt(document.getElementById('s-m').value);
+  if(isNaN(h)||h<0||h>23||isNaN(m)||m<0||m>59){ toast('格式錯誤','請輸入正確時間'); return; }
+  alarmH=h; alarmM=m;
+  toast('✅ 提醒時間已儲存',`每天 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} 提醒`,true);
+  renderSettings(document.getElementById('content'));
+}
+function toggleAlarm(btn){
+  alarmOn=!alarmOn;
+  btn.textContent=alarmOn?'✅ 提醒已開啟':'⭕ 提醒已關閉';
+  btn.className=alarmOn?'toggle':'toggle off';
+  toast(alarmOn?'🔔 提醒已開啟':'🔕 提醒已關閉','',alarmOn);
+}
+function markReplied(id){
+  const r=D.reviews.find(x=>x.id===id);
+  if(r){ r.replied=true; save(D); badges(); go(curView); toast('✅ 已標記為已回覆','',true); }
+}
+function delRev(id){
+  if(!confirm('確定要刪除這則評論嗎？')) return;
+  D.reviews=D.reviews.filter(r=>r.id!==id);
+  save(D); badges(); go(curView);
+}
+function openAddRev(){
+  selStar=0;
+  document.getElementById('r-author').value='';
+  document.getElementById('r-txt').value='';
+  document.getElementById('r-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('r-rep').value='0';
+  const sel=document.getElementById('r-store');
+  sel.innerHTML=D.stores.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  setStar(0);
+  document.getElementById('rev-modal').style.display='flex';
+}
+function setStar(n){
+  selStar=n;
+  document.querySelectorAll('.ss').forEach(s=>s.classList.toggle('on',parseInt(s.dataset.v)<=n));
+}
+function addRev(){
+  const sid=parseInt(document.getElementById('r-store').value);
+  const author=document.getElementById('r-author').value.trim();
+  const txt=document.getElementById('r-txt').value.trim();
+  const date=document.getElementById('r-date').value;
+  const replied=document.getElementById('r-rep').value==='1';
+  if(!sid||selStar===0){ toast('請選擇門店並給予星數',''); return; }
+  D.reviews.push({id:D.nextId++, storeId:sid, author, stars:selStar, txt, date, replied});
+  save(D);
+  closeModal('rev-modal');
+  toast(`✅ 評論已新增`,`${selStar}★ ${selStar<=3?'⚠ 低分評論，請留意':''}`,true);
+  badges(); go(curView);
+}
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+function refresh(){ save(D); badges(); go(curView); toast('🔄 已更新','',true); }
+
+
+// ── WEEKLY REPORT ──
+// Runs every Wednesday; calculates avg star rating for reviews from the past 4 weeks (rolling from last Tuesday)
+function getWeeklyWindow(){
+  // anchor: last Tuesday (or today if today is Tuesday)
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  const daysToLastTue = day >= 2 ? day - 2 : day + 5;
+  const anchor = new Date(now);
+  anchor.setDate(now.getDate() - daysToLastTue);
+  anchor.setHours(23,59,59,0);
+  const start = new Date(anchor);
+  start.setDate(anchor.getDate() - 27); // 4 weeks = 28 days back from anchor
+  start.setHours(0,0,0,0);
+  return { start, end: anchor };
+}
+
+function calcWeeklyStats(){
+  const {start, end} = getWeeklyWindow();
+  const startStr = start.toISOString().slice(0,10);
+  const endStr   = end.toISOString().slice(0,10);
+  const result = {};
+  D.stores.forEach(s=>{
+    const rs = D.reviews.filter(r=>{
+      if(r.storeId!==s.id) return false;
+      if(!r.date) return false;
+      return r.date >= startStr && r.date <= endStr;
+    });
+    const total = rs.length;
+    const avg   = total ? (rs.reduce((a,r)=>a+r.stars,0)/total) : null;
+    const low   = rs.filter(r=>r.stars<=3).length;
+    const unr   = rs.filter(r=>!r.replied).length;
+    result[s.id] = { total, avg, low, unr, reviews: rs };
+  });
+  return { result, startStr, endStr };
+}
+
+// Per-week breakdown (4 individual weeks)
+function calcFourWeeks(){
+  const now = new Date();
+  const day = now.getDay();
+  const daysToLastTue = day >= 2 ? day - 2 : day + 5;
+  const anchor = new Date(now);
+  anchor.setDate(now.getDate() - daysToLastTue);
+
+  const weeks = [];
+  for(let w=3; w>=0; w--){
+    const wEnd = new Date(anchor);
+    wEnd.setDate(anchor.getDate() - w*7);
+    wEnd.setHours(23,59,59,0);
+    const wStart = new Date(wEnd);
+    wStart.setDate(wEnd.getDate() - 6);
+    wStart.setHours(0,0,0,0);
+    const ws = wStart.toISOString().slice(0,10);
+    const we = wEnd.toISOString().slice(0,10);
+    const label = `${ws.slice(5).replace('-','/')}～${we.slice(5).replace('-','/')}`;
+    const storeData = {};
+    D.stores.forEach(s=>{
+      const rs = D.reviews.filter(r=>r.storeId===s.id && r.date>=ws && r.date<=we);
+      storeData[s.id] = rs.length ? (rs.reduce((a,r)=>a+r.stars,0)/rs.length) : null;
+    });
+    weeks.push({label, ws, we, storeData});
+  }
+  return weeks;
+}
+
+function renderWeekly(el){
+  const today = new Date();
+  const isWed = today.getDay()===3;
+  const {result, startStr, endStr} = calcWeeklyStats();
+  const weeks = calcFourWeeks();
+
+  // Overall stats for period
+  const allRev = D.reviews.filter(r=>r.date>=startStr&&r.date<=endStr);
+  const overallAvg = allRev.length ? (allRev.reduce((a,r)=>a+r.stars,0)/allRev.length).toFixed(2) : '-';
+
+  // Inline sparkline bars (HTML)
+  function bar(val, max=5){
+    if(val===null) return '<span style="color:var(--text3);font-size:11px">無資料</span>';
+    const pct = (val/max*100).toFixed(0);
+    const col = val>=4?'var(--success)':val>=3?'var(--warn)':'var(--danger)';
+    return `<div style="display:flex;align-items:center;gap:7px">
+      <div style="height:6px;width:80px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <span style="font-family:'Space Mono',monospace;font-size:12px;color:${col}">${val.toFixed(2)}</span>
+    </div>`;
+  }
+
+  // Store summary table
+  let storeRows='';
+  D.stores.forEach(s=>{
+    const st=result[s.id];
+    const trend = weeks.map(w=>{
+      const v=w.storeData[s.id];
+      return v!==null ? v.toFixed(1) : '-';
+    });
+    const trendHtml = trend.map((v,i)=>{
+      const col = v==='-'?'var(--text3)':Number(v)>=4?'var(--success)':Number(v)>=3?'var(--warn)':'var(--danger)';
+      return `<span style="font-family:'Space Mono',monospace;font-size:11px;color:${col};padding:1px 5px;background:var(--surface2);border-radius:4px">${v}★</span>`;
+    }).join(' → ');
+    storeRows+=`<tr>
+      <td><span class="store-nm">${s.name}</span></td>
+      <td style="font-family:'Space Mono',monospace;color:var(--text2)">${st.total}</td>
+      <td>${st.avg!==null?bar(st.avg):'<span style="color:var(--text3);font-size:11px">無資料</span>'}</td>
+      <td>${st.low>0?`<span class="pill wrn">${st.low} 則</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${st.unr>0?`<span class="pill unr">${st.unr} 則</span>`:`<span class="pill rep">✓</span>`}</td>
+      <td style="white-space:nowrap">${trendHtml}</td>
+    </tr>`;
+  });
+
+  // 4-week detail breakdown (per store per week)
+  let weekCols = weeks.map(w=>`<th>${w.label}</th>`).join('');
+  let weekRows='';
+  D.stores.forEach(s=>{
+    const cols=weeks.map(w=>{
+      const v=w.storeData[s.id];
+      if(v===null) return '<td style="color:var(--text3);text-align:center">—</td>';
+      const col=v>=4?'var(--success)':v>=3?'var(--warn)':'var(--danger)';
+      return `<td style="text-align:center;font-family:'Space Mono',monospace;font-size:12px;color:${col}">${v.toFixed(2)}★</td>`;
+    }).join('');
+    weekRows+=`<tr><td><span class="store-nm">${s.name}</span></td>${cols}</tr>`;
+  });
+
+  el.innerHTML=`
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+    <div class="stat-card acc">
+      <div class="lbl">統計區間</div>
+      <div class="val" style="font-size:16px">${startStr.slice(5).replace('-','/')} – ${endStr.slice(5).replace('-','/')}</div>
+      <div class="sub">回推四週（以週二為截止）</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">期間總評論數</div>
+      <div class="val">${allRev.length}</div>
+      <div class="sub">全品牌合計</div>
+    </div>
+    <div class="stat-card ${Number(overallAvg)>=4?'suc':Number(overallAvg)>=3?'wrn':'dan'}">
+      <div class="lbl">期間平均星數</div>
+      <div class="val">${overallAvg}</div>
+      <div class="sub">全門店加權平均</div>
+    </div>
+  </div>
+
+  ${!isWed?`<div class="alarm-bar" style="margin-bottom:20px;padding:12px 16px;border-left:3px solid var(--warn)">
+    <div style="font-size:18px">📅</div>
+    <div class="info">
+      <h3 style="font-size:13px">今天不是週三</h3>
+      <p style="font-size:12px">每週三自動產出週報。目前顯示的是最新四週資料，數字會在每週三更新。</p>
+    </div>
+  </div>`:''}
+
+  <div class="sec">各門店四週綜合評分</div>
+  <div class="tbl-wrap" style="margin-bottom:20px">
+    <table>
+      <thead><tr><th>門店</th><th>評論數</th><th>四週平均星數</th><th>低分則數</th><th>未回覆</th><th>四週趨勢（舊→新）</th></tr></thead>
+      <tbody>${storeRows}</tbody>
+    </table>
+  </div>
+
+  <div class="sec">各週詳細數據</div>
+  <div class="tbl-wrap" style="margin-bottom:20px">
+    <table>
+      <thead><tr><th>門店</th>${weekCols}</tr></thead>
+      <tbody>${weekRows}</tbody>
+    </table>
+  </div>
+
+  <div class="alarm-bar" style="padding:13px 15px">
+    <div style="font-size:18px">💚</div>
+    <div class="info">
+      <h3>每週三 Line 推播週報</h3>
+      <p>當日為週三且有設定 Line Messaging API 時，系統會自動在 <strong style="color:var(--warn)">09:00</strong> 發送週報至群組。</p>
+    </div>
+    <button class="btn-line-ghost" onclick="sendWeeklyReport()">📤 立即發送週報</button>
+  </div>`;
+}
+
+async function sendWeeklyReport(){
+  if(!globalLineToken||!globalLineGroupId){ toast('請先完成 Line 設定',''); return; }
+  const {result, startStr, endStr} = calcWeeklyStats();
+  const weeks = calcFourWeeks();
+  const allRev = D.reviews.filter(r=>r.date>=startStr&&r.date<=endStr);
+  const overallAvg = allRev.length ? (allRev.reduce((a,r)=>a+r.stars,0)/allRev.length).toFixed(2) : 'N/A';
+
+  let msg=`📊 鍋泰暖週報\n${startStr.slice(5).replace('-','/')}～${endStr.slice(5).replace('-','/')}\n全品牌平均 ${overallAvg}★\n${'─'.repeat(17)}\n`;
+  D.stores.forEach(s=>{
+    const st=result[s.id];
+    const wTrend=weeks.map(w=>{
+      const v=w.storeData[s.id];
+      return v!==null?v.toFixed(1)+'★':'-';
+    }).join(' → ');
+    const avg=st.avg!==null?st.avg.toFixed(2):'無資料';
+    msg+=`\n🏪 ${s.name}\n   平均：${avg}★  評論：${st.total}則  低分：${st.low}則\n   週趨勢：${wTrend}\n`;
+  });
+  msg+=`${'─'.repeat(17)}\n週三週報自動產出`;
+
+  toast('💚 發送週報中…','');
+  const ok=await lineMessagingSend(msg);
+  if(ok){toast('✅ 週報已發送！','',true);logSend('四週週報',true);}
+  else{toast('❌ 發送失敗','');logSend('週報發送失敗',false);}
+}
+
+// Auto weekly report on Wednesdays at 09:00
+let lastWeeklyDate='';
+function checkWeeklyReport(){
+  const now=new Date();
+  if(now.getDay()!==3) return; // only Wednesday
+  if(now.getHours()!==9||now.getMinutes()!==0) return;
+  const today=now.toISOString().slice(0,10);
+  if(today===lastWeeklyDate) return;
+  lastWeeklyDate=today;
+  sendWeeklyReport();
+}
+
+
+// ── INIT ──
+loadGlobalToken(); badges(); go('dash');
+</script>
+</body>
+</html>
